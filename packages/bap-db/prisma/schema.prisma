@@ -1,0 +1,890 @@
+// ============================================================================
+//  BAP Recruiting Platform — PostgreSQL schema (Prisma)
+//  Fully normalized · UUID PKs · soft deletes (deletedAt) · audit timestamps
+//  (createdAt/updatedAt) · explicit FKs, cascade rules, and indexes.
+//
+//  Conventions
+//  • Tables are snake_case plural via @@map; columns stay camelCase.
+//  • Every mutable business entity has createdAt/updatedAt and a nullable
+//    deletedAt for soft deletion (append-only logs/events do not).
+//  • Ownership children cascade from their parent; optional cross-links use
+//    SetNull so a deleted reference never orphans the row.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  PLAYER
+  PARENT
+  COACH
+  ADMIN
+  STAFF
+}
+
+enum Division {
+  D1
+  D2
+  D3
+  NAIA
+  JUCO
+}
+
+enum Region {
+  WEST
+  MIDWEST
+  SOUTH
+  NORTHEAST
+}
+
+enum Position {
+  P
+  C
+  FIRST_BASE
+  SECOND_BASE
+  THIRD_BASE
+  SHORTSTOP
+  LEFT_FIELD
+  CENTER_FIELD
+  RIGHT_FIELD
+  OUTFIELD
+  DH
+  UTILITY
+}
+
+enum Hand {
+  R
+  L
+}
+
+enum BattingSide {
+  R
+  L
+  S
+}
+
+enum CoachType {
+  COLLEGE
+  CLUB
+  HIGH_SCHOOL
+  SCOUT
+}
+
+enum TeamType {
+  HIGH_SCHOOL
+  CLUB
+  TRAVEL
+  LEGION
+  ACADEMY
+}
+
+enum GuardianRelationship {
+  FATHER
+  MOTHER
+  GUARDIAN
+  OTHER
+}
+
+enum MetricType {
+  EXIT_VELOCITY
+  PITCHING_VELOCITY
+  THROWING_VELOCITY
+  INFIELD_VELOCITY
+  OUTFIELD_VELOCITY
+  SIXTY_YARD_DASH
+  POP_TIME
+  HOME_TO_FIRST
+  BATTING_AVG
+  ON_BASE_PCT
+  SLUGGING
+  ERA
+  WHIP
+  K_PER_9
+  HEIGHT_CM
+  WEIGHT_KG
+}
+
+enum VideoKind {
+  HITTING
+  PITCHING
+  FIELDING
+  GAME
+  SHOWCASE
+  SKILLS
+}
+
+enum VideoStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum RecruitingStatus {
+  INTERESTED
+  RESEARCHING
+  PLANNING
+  CONTACTED
+  AWAITING
+  APPLIED
+  DECLINED
+}
+
+enum ContactStatus {
+  NONE
+  SENT
+  OPENED
+  REPLIED
+  INTEREST
+  MEETING
+  CLOSED
+}
+
+enum MessageDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum Classification {
+  REACH
+  TARGET
+  SAFETY
+}
+
+enum ScholarshipType {
+  ATHLETIC
+  ACADEMIC
+  NEED_BASED
+  PARTIAL
+  FULL
+  PREFERRED_WALKON
+  WALKON
+}
+
+enum ScholarshipStatus {
+  OFFERED
+  NEGOTIATING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum CommitmentType {
+  VERBAL
+  NLI
+  TRANSFER
+}
+
+enum CommitmentStatus {
+  ACTIVE
+  DECOMMITTED
+  SIGNED
+}
+
+enum ApplicationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  ACCEPTED
+  DENIED
+  WAITLISTED
+}
+
+enum ShowcaseStatus {
+  INTERESTED
+  REGISTERED
+  ATTENDED
+  CANCELLED
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+}
+
+enum NotificationType {
+  COACH_VIEW
+  MESSAGE
+  SCHOOL_UPDATE
+  DEADLINE
+  SCORE_READY
+  SYSTEM
+}
+
+enum DocumentKind {
+  TRANSCRIPT
+  NCAA_ELIGIBILITY
+  TOEFL
+  SAT_REPORT
+  ACT_REPORT
+  RESUME
+  MEDICAL
+  OTHER
+}
+
+enum DocumentStatus {
+  MISSING
+  PENDING
+  COMPLETE
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  role      Role     @default(PLAYER)
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+
+  player Player?
+  parent Parent?
+  coach  Coach?
+
+  notifications   Notification[]
+  analyticsEvents AnalyticsEvent[]
+  activityLogs    ActivityLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Player {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @unique @db.Uuid
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName         String
+  lastName          String
+  firstNameKana     String?
+  lastNameKana      String?
+  graduationYear    Int
+  gpa               Decimal?      @db.Decimal(4, 2)
+  sat               Int?
+  act               Int?
+  toefl             Int?
+  primaryPosition   Position
+  secondaryPosition Position?
+  heightCm          Decimal?      @db.Decimal(5, 1)
+  weightKg          Decimal?      @db.Decimal(5, 1)
+  throws            Hand?
+  bats              BattingSide?
+  highSchool        String?
+  city              String?
+  state             String?
+  country           String        @default("JP")
+  bio               String?
+  phone             String?
+  profilePhotoUrl   String?
+  isPublic          Boolean       @default(false)
+  publicSlug        String?       @unique
+
+  guardians        PlayerGuardian[]
+  teamMemberships  TeamMembership[]
+  metrics          PlayerMetric[]
+  videos           Video[]
+  evaluations      Evaluation[]
+  recruitingScores RecruitingScore[]
+  preference       RecruitingPreference?
+  savedSchools     SavedSchool[]
+  coachContacts    CoachContact[]
+  scholarships     Scholarship[]
+  commitments      Commitment[]
+  applications     Application[]
+  showcases        PlayerShowcase[]
+  tasks            Task[]
+  documents        Document[]
+  notes            Note[]
+  analyticsEvents  AnalyticsEvent[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([graduationYear])
+  @@index([state])
+  @@index([primaryPosition])
+  @@index([deletedAt])
+  @@map("players")
+}
+
+model Parent {
+  id           String               @id @default(uuid()) @db.Uuid
+  userId       String               @unique @db.Uuid
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  phone        String?
+  relationship GuardianRelationship @default(GUARDIAN)
+
+  guardianOf PlayerGuardian[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("parents")
+}
+
+model PlayerGuardian {
+  id           String               @id @default(uuid()) @db.Uuid
+  playerId     String               @db.Uuid
+  player       Player               @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  parentId     String               @db.Uuid
+  parent       Parent               @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  relationship GuardianRelationship @default(GUARDIAN)
+  isPrimary    Boolean              @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, parentId])
+  @@index([parentId])
+  @@map("player_guardians")
+}
+
+model Coach {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String?    @unique @db.Uuid
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      CoachType
+  firstName String
+  lastName  String
+  title     String?
+  email     String?
+  phone     String?
+  schoolId  String?    @db.Uuid
+  school    School?    @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  teamId    String?    @db.Uuid
+  team      Team?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  contacts    CoachContact[]
+  evaluations Evaluation[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([schoolId])
+  @@index([teamId])
+  @@index([email])
+  @@map("coaches")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Organizations
+// ─────────────────────────────────────────────────────────────────────────────
+
+model School {
+  id                   String    @id @default(uuid()) @db.Uuid
+  extId                Int?      @unique // maps to the scraped colleges import id
+  name                 String
+  city                 String?
+  state                String?
+  region               Region?
+  division             Division
+  conference           String?
+  type                 String? // Public / Private
+  enrollment           Int?
+  tuition              Int?
+  acceptanceRate       Decimal?  @db.Decimal(4, 3)
+  rosterSize           Int?
+  incomingClassSize    Int?
+  latitude             Decimal?  @db.Decimal(9, 6)
+  longitude            Decimal?  @db.Decimal(9, 6)
+  scholarshipAvailable Boolean?
+  website              String?
+  logoUrl              String?
+
+  coaches          Coach[]
+  snapshots        SchoolSnapshot[]
+  savedBy          SavedSchool[]
+  recruitingScores RecruitingScore[]
+  scholarships     Scholarship[]
+  commitments      Commitment[]
+  applications     Application[]
+  coachContacts    CoachContact[]
+  notes            Note[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([division])
+  @@index([state])
+  @@index([conference])
+  @@index([name])
+  @@map("schools")
+}
+
+// Point-in-time capture of a school's recruiting profile (roster, needs, etc.).
+model SchoolSnapshot {
+  id              String     @id @default(uuid()) @db.Uuid
+  schoolId        String     @db.Uuid
+  school          School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  capturedAt      DateTime   @default(now())
+  rosterSize      Int?
+  recruitingNeeds Position[]
+  academicAvgGpa  Decimal?   @db.Decimal(4, 2)
+  academicAvgSat  Int?
+  coachPreferences Json?
+  source          String?
+
+  @@index([schoolId, capturedAt])
+  @@map("school_snapshots")
+}
+
+model Team {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  type         TeamType
+  organization String?
+  city         String?
+  state        String?
+  season       String?
+
+  memberships TeamMembership[]
+  coaches     Coach[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([type])
+  @@index([state])
+  @@map("teams")
+}
+
+model TeamMembership {
+  id           String   @id @default(uuid()) @db.Uuid
+  playerId     String   @db.Uuid
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  teamId       String   @db.Uuid
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  jerseyNumber Int?
+  isCurrent    Boolean  @default(true)
+  startDate    DateTime?
+  endDate      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, teamId])
+  @@index([teamId])
+  @@map("team_memberships")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Player performance data
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PlayerMetric {
+  id         String     @id @default(uuid()) @db.Uuid
+  playerId   String     @db.Uuid
+  player     Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  type       MetricType
+  value      Decimal    @db.Decimal(8, 3)
+  unit       String?
+  source     String?
+  verified   Boolean    @default(false)
+  measuredAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId, type, measuredAt])
+  @@map("player_metrics")
+}
+
+model Video {
+  id           String      @id @default(uuid()) @db.Uuid
+  playerId     String      @db.Uuid
+  player       Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  kind         VideoKind
+  title        String?
+  url          String
+  thumbnailUrl String?
+  durationSec  Int?
+  status       VideoStatus @default(READY)
+  views        Int         @default(0)
+  recordedAt   DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId, kind])
+  @@map("videos")
+}
+
+model Evaluation {
+  id               String   @id @default(uuid()) @db.Uuid
+  playerId         String   @db.Uuid
+  player           Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  evaluatorCoachId String?  @db.Uuid
+  evaluatorCoach   Coach?   @relation(fields: [evaluatorCoachId], references: [id], onDelete: SetNull)
+  evaluatorName    String?
+  overall          Int? // 20–80 scouting scale
+  tools            Json? // { hit, power, run, arm, field }
+  summary          String?
+  evaluatedAt      DateTime @default(now())
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId])
+  @@index([evaluatorCoachId])
+  @@map("evaluations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recruiting
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RecruitingScore {
+  id             String         @id @default(uuid()) @db.Uuid
+  playerId       String         @db.Uuid
+  player         Player         @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  schoolId       String         @db.Uuid
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  overall        Decimal        @db.Decimal(5, 2)
+  grade          String
+  confidence     Int
+  classification Classification
+  breakdown      Json
+  engineVersion  String
+  isLatest       Boolean        @default(true)
+  computedAt     DateTime       @default(now())
+
+  @@unique([playerId, schoolId, engineVersion])
+  @@index([playerId, isLatest])
+  @@index([schoolId])
+  @@index([playerId, computedAt])
+  @@map("recruiting_scores")
+}
+
+model RecruitingPreference {
+  id                  String     @id @default(uuid()) @db.Uuid
+  playerId            String     @unique @db.Uuid
+  player              Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  targetDivisions     Division[]
+  preferredRegions    Region[]
+  preferredStates     String[]
+  maxTuition          Int?
+  wantsScholarship    Boolean    @default(true)
+  prioritizeAcademics Boolean    @default(false)
+  desiredMajors       String[]
+  notes               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("recruiting_preferences")
+}
+
+model SavedSchool {
+  id               String           @id @default(uuid()) @db.Uuid
+  playerId         String           @db.Uuid
+  player           Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  schoolId         String           @db.Uuid
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  recruitingStatus RecruitingStatus @default(INTERESTED)
+  personalRating   Int? // 1–5
+  isFavorite       Boolean          @default(false)
+  notes            String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([playerId, schoolId])
+  @@index([playerId, recruitingStatus])
+  @@index([playerId, isFavorite])
+  @@map("saved_schools")
+}
+
+model CoachContact {
+  id             String        @id @default(uuid()) @db.Uuid
+  playerId       String        @db.Uuid
+  player         Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  coachId        String?       @db.Uuid
+  coach          Coach?        @relation(fields: [coachId], references: [id], onDelete: SetNull)
+  schoolId       String?       @db.Uuid
+  school         School?       @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  coachName      String?
+  coachEmail     String?
+  coachRole      String?
+  status         ContactStatus @default(NONE)
+  nextAction     String?
+  lastActivityAt DateTime?
+
+  messages Message[]
+  notes    Note[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId, status])
+  @@index([schoolId])
+  @@index([lastActivityAt])
+  @@map("coach_contacts")
+}
+
+model Message {
+  id        String           @id @default(uuid()) @db.Uuid
+  contactId String           @db.Uuid
+  contact   CoachContact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  direction MessageDirection
+  subject   String?
+  body      String
+  sentAt    DateTime         @default(now())
+  openedAt  DateTime?
+  isRead    Boolean          @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([contactId, sentAt])
+  @@map("messages")
+}
+
+model Scholarship {
+  id         String            @id @default(uuid()) @db.Uuid
+  playerId   String            @db.Uuid
+  player     Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  schoolId   String?           @db.Uuid
+  school     School?           @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  type       ScholarshipType
+  amount     Decimal?          @db.Decimal(10, 2)
+  percentage Int?
+  status     ScholarshipStatus @default(OFFERED)
+  offeredAt  DateTime?
+  expiresAt  DateTime?
+  notes      String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId])
+  @@index([schoolId])
+  @@map("scholarships")
+}
+
+model Commitment {
+  id                String           @id @default(uuid()) @db.Uuid
+  playerId          String           @db.Uuid
+  player            Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  schoolId          String           @db.Uuid
+  school            School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  type              CommitmentType
+  status            CommitmentStatus @default(ACTIVE)
+  committedAt       DateTime         @default(now())
+  announcedPublicly Boolean          @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId])
+  @@index([schoolId])
+  @@map("commitments")
+}
+
+model Application {
+  id          String            @id @default(uuid()) @db.Uuid
+  playerId    String            @db.Uuid
+  player      Player            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  schoolId    String            @db.Uuid
+  school      School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  status      ApplicationStatus @default(NOT_STARTED)
+  submittedAt DateTime?
+  decisionAt  DateTime?
+  notes       String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([playerId, schoolId])
+  @@index([playerId, status])
+  @@map("applications")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Events / showcases
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ShowcaseEvent {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  organization String?
+  startDate    DateTime
+  endDate      DateTime?
+  city         String?
+  state        String?
+  division     Division?
+  cost         Int?
+  website      String?
+
+  attendees PlayerShowcase[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([startDate])
+  @@index([state])
+  @@map("showcase_events")
+}
+
+model PlayerShowcase {
+  id           String         @id @default(uuid()) @db.Uuid
+  playerId     String         @db.Uuid
+  player       Player         @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  eventId      String         @db.Uuid
+  event        ShowcaseEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status       ShowcaseStatus @default(REGISTERED)
+  registeredAt DateTime       @default(now())
+  resultNotes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, eventId])
+  @@index([eventId])
+  @@map("player_showcases")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ops: tasks, notifications, documents, notes, analytics, audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Task {
+  id        String     @id @default(uuid()) @db.Uuid
+  playerId  String     @db.Uuid
+  player    Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  text      String
+  status    TaskStatus @default(OPEN)
+  dueDate   DateTime?
+  sortOrder Int        @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId, status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model Notification {
+  id     String           @id @default(uuid()) @db.Uuid
+  userId String           @db.Uuid
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type   NotificationType
+  title  String
+  body   String?
+  data   Json?
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model Document {
+  id        String         @id @default(uuid()) @db.Uuid
+  playerId  String         @db.Uuid
+  player    Player         @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  kind      DocumentKind
+  label     String?
+  url       String?
+  status    DocumentStatus @default(PENDING)
+  expiresAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId, kind])
+  @@map("documents")
+}
+
+model Note {
+  id             String        @id @default(uuid()) @db.Uuid
+  playerId       String        @db.Uuid
+  player         Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  schoolId       String?       @db.Uuid
+  school         School?       @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  coachContactId String?       @db.Uuid
+  coachContact   CoachContact? @relation(fields: [coachContactId], references: [id], onDelete: SetNull)
+  body           String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([playerId])
+  @@index([schoolId])
+  @@map("notes")
+}
+
+// High-volume, append-only. No soft delete; partition/rotate by time.
+model AnalyticsEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  playerId   String?  @db.Uuid
+  player     Player?  @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  name       String
+  properties Json?
+  sessionId  String?
+  occurredAt DateTime @default(now())
+
+  @@index([name, occurredAt])
+  @@index([playerId])
+  @@index([occurredAt])
+  @@map("analytics_events")
+}
+
+// Immutable audit trail. Append-only.
+model ActivityLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @db.Uuid
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  entityType  String
+  entityId    String   @db.Uuid
+  before      Json?
+  after       Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}

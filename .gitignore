@@ -1,5 +1,12 @@
 node_modules/
+.env
+.env.*.local
 .DS_Store
+*.timestamp-*.mjs
+.checkpoints/
+dist/
+build/
+coverage/
 *.mov
 *.log
 tmp*/

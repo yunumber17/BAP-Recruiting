@@ -1,0 +1,25 @@
+/** Public API surface for @bap/ai-recruiting-advisor. */
+export * from './models/common.js';
+export * from './models/output.js';
+export * from './models/errors.js';
+export * from './providers/types.js';
+export { ScriptedProvider } from './providers/ScriptedProvider.js';
+export { OpenAICompatibleProvider } from './providers/OpenAICompatibleProvider.js';
+export { AnthropicCompatibleProvider } from './providers/AnthropicCompatibleProvider.js';
+export * from './context/providers.js';
+export { ContextBuilder } from './context/ContextBuilder.js';
+export { createMockContextProviders } from './context/mocks.js';
+export * from './memory/Memory.js';
+export { Advisor } from './advisors/Advisor.js';
+export type { AdvisorRequest, AdvisorResult, AdvisorStreamEvent, AdvisorDeps } from './advisors/Advisor.js';
+export { OUTPUT_SCHEMAS, EmailAdvice, GoalPlanAdvice, TimelineAdvice } from './advisors/schemas.js';
+export { PROMPT_TEMPLATES } from './prompts/registry.js';
+export { renderPrompt, SHARED_SAFETY } from './prompts/base.js';
+export type { PromptTemplate } from './prompts/base.js';
+export { AdvisorService } from './services/AdvisorService.js';
+export { ToolRegistry } from './tools/Tool.js';
+export type { Tool } from './tools/Tool.js';
+export { findImprovementAreasTool, explainRecruitingScoreTool } from './tools/definitions.js';
+export { streamToSse, streamToWebSocket, collectStream } from './api/streaming.js';
+export { createAdvisorContainer } from './di/container.js';
+export type { AdvisorContainer, ContainerOverrides } from './di/container.js';

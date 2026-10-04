@@ -1,0 +1,33 @@
+{
+  "name": "@bap/school-importer",
+  "version": "1.0.0",
+  "description": "Standalone, idempotent, streaming ETL pipeline that safely populates and maintains the Schools table. First resource on a reusable ETL framework.",
+  "type": "module",
+  "bin": { "bap-import": "dist/cli/index.js" },
+  "scripts": {
+    "import": "tsx src/cli/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint 'src/**/*.ts' 'tests/**/*.ts'"
+  },
+  "dependencies": {
+    "csv-parse": "^5.5.6",
+    "pino": "^9.2.0",
+    "stream-json": "^1.8.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/stream-json": "^1.7.7",
+    "tsx": "^4.16.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "@prisma/client": "^5.16.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

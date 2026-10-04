@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false
+  },
+  "comment": "Full build INCLUDING the Prisma repositories. Requires `prisma generate` in @bap/database so @prisma/client model types exist.",
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test/**/*.ts"]
+}
