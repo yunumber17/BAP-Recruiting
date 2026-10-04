@@ -1,0 +1,3 @@
+# Copy these two files from your www / Xcode web folder before pushing:
+#   app/config.js   (Supabase URL + public anon key only; never the service_role key)
+#   app/auth.js
