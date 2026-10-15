@@ -1,9 +1,9 @@
-# BAP Recruiting — Ballers Across Pacific
+# BAP Recruiting - Ballers Across Pacific
 
 A decision-support platform for Japanese high-school baseball players entering U.S. college recruiting. The app is entirely in Japanese. It scores all 1,618 U.S. college baseball programs for an individual player, ranks college camps by percentile, drafts coach emails in English, and answers recruiting questions from the player's own data.
 
 **Live:** iOS App Store (BAP Recruiting) · Web: https://app.ballersacrosspacific.com
-**Author:** Yu Suefuji — founder, product design, scoring model, data, security, go-to-market.
+**Author:** Yu Suefuji: founder, product design, scoring model, data, security, go-to-market.
 
 This is the full codebase submitted with my MIT Maker Portfolio. A working demonstration (a 2-minute screen recording of the live app) is included in the portfolio.
 
@@ -11,10 +11,10 @@ This is the full codebase submitted with my MIT Maker Portfolio. A working demon
 
 ## What it does
 
-- **School Match** — every one of 1,618 programs is scored for the player with a weighted multi-criteria model and labeled 挑戦校 (reach) / 現実校 (target) / 安全校 (safety), sorted by fit rather than fame.
-- **Prospect Camps** — college camps are scored by the same engine and ranked by *percentile* across all upcoming camps, so five stars is reserved for the top band.
-- **AI Recruiting Assistant** — answers questions in Japanese using the player's actual profile as context. Inference runs server-side in an edge function; the model key never reaches the client.
-- **Coach outreach + English email drafting** — tracks every coach conversation and drafts formal English emails from the player's own stats.
+- **School Match** : every one of 1,618 programs is scored for the player with a weighted multi-criteria model and labeled 挑戦校 (reach) / 現実校 (target) / 安全校 (safety), sorted by fit rather than fame.
+- **Prospect Camps** : college camps are scored by the same engine and ranked by *percentile* across all upcoming camps, so five stars is reserved for the top band.
+- **AI Recruiting Assistant** : answers questions in Japanese using the player's actual profile as context. Inference runs server-side in an edge function; the model key never reaches the client.
+- **Coach outreach + English email drafting** : tracks every coach conversation and drafts formal English emails from the player's own stats.
 - **Readiness score, daily recruiting focus, daily baseball English, shareable profile card.**
 
 ## How fit is scored
